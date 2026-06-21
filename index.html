@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>IMM - OEE Entry Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+  body { background: linear-gradient(135deg, #f0f4ff, #e8eeff); min-height: 100vh; padding: 20px; }
+  .top-bar { height: 4px; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 4px; margin-bottom: 20px; }
+  .header, .card {
+    background: #fff; border-radius: 14px; padding: 24px 32px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .header { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .header h1 { font-size: 22px; color: #0f172a; letter-spacing: 1px; }
+  .header .icon { font-size: 28px; }
+  .section-title { font-size: 18px; color: #1e293b; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    font-size: 14px; outline: none; transition: 0.2s; background: #fff;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.15); }
+  .full { grid-column: 1 / -1; }
+  textarea { resize: vertical; min-height: 70px; }
+  button {
+    margin-top: 20px; background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: #fff; padding: 12px 28px; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(79,70,229,0.3); }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .toast {
+    position: fixed; top: 20px; right: 20px; padding: 14px 22px; border-radius: 8px;
+    color: #fff; font-weight: 500; display: none; z-index: 1000;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+  .toast.success { background: #10b981; }
+  .toast.error { background: #ef4444; }
+</style>
+</head>
+<body>
+  <div class="top-bar"></div>
+
+  <div class="header">
+    <span class="icon">🤖</span>
+    <h1>AKIJ LIGHT ENGINEERING LIMITED — IMM OEE ENTRY PORTAL</h1>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🏭 Production Entry</h2>
+    <form id="entryForm">
+      <div class="grid">
+        <div><label>Date</label><input type="date" name="date" required></div>
+
+        <div>
+          <label>Shift</label>
+          <select name="shift" required>
+            <option value="">Select</option>
+            <option value="Day">Day</option>
+            <option value="Night">Night</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Machine No.</label>
+          <select name="machineNo" required>
+            <option value="">Select</option>
+            <option>A-2</option><option>A-4</option><option>A-5</option>
+            <option>B-1</option><option>B-2</option><option>B-3</option>
+            <option>B-4</option><option>B-5</option><option>B-6</option><option>B-7</option>
+          </select>
+        </div>
+
+        <div class="full"><label>Item Name</label><input type="text" name="itemName" placeholder="e.g. ENOVAR EXHAUST FAN 10IN BACK PART (SFG)" required></div>
+
+        <div><label>Cycle Time (Sec)</label><input type="number" step="0.01" name="cycleTime" required></div>
+        <div><label>Cavity</label><input type="number" name="cavity" required></div>
+        <div><label>Available Time (Min)</label><input type="number" name="availableTime" required></div>
+
+        <div><label>Downtime (Min)</label><input type="number" name="downtime" value="0" required></div>
+        <div>
+          <label>Downtime Reason</label>
+          <select name="downtimeReason">
+            <option value="No Problem">No Problem</option>
+            <option>Mixture Problem</option>
+            <option>Mixture Hit Problem</option>
+            <option>Resin Hit, Product Problem</option>
+            <option>Mold Problem</option>
+            <option>Mold Change</option>
+            <option>Mold Change, Planning</option>
+            <option>Robot Setting</option>
+            <option>Flash Cutting Problem</option>
+            <option>Hit Problem, Nozzel Problem</option>
+            <option>Runner Bush Problem</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div><label>M/C Capacity</label><input type="number" name="mcCapacity" required></div>
+        <div><label>Actual Production</label><input type="number" name="actualProduction" required></div>
+        <div><label>Reject QTY</label><input type="number" name="rejectQty" value="0" required></div>
+      </div>
+
+      <button type="submit" id="submitBtn">📤 Submit Production</button>
+    </form>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // 🔗 Replace with your deployed Apps Script Web App URL
+  const WEB_APP_URL = "https://script.google.com/macros/s/XXXXXXXXXXXXXXX/exec";
+
+  const form = document.getElementById("entryForm");
+  const toast = document.getElementById("toast");
+  const btn = document.getElementById("submitBtn");
+
+  function showToast(msg, type) {
+    toast.textContent = msg;
+    toast.className = "toast " + type;
+    toast.style.display = "block";
+    setTimeout(() => toast.style.display = "none", 3500);
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    btn.disabled = true; btn.textContent = "Submitting...";
+
+    const data = Object.fromEntries(new FormData(form));
+
+    try {
+      const res = await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "text/plain;charset=utf-8" } // avoids CORS preflight
+      });
+      const result = await res.json();
+      if (result.status === "success") {
+        showToast("✅ Data added to row " + result.row, "success");
+        form.reset();
+      } else {
+        showToast("❌ " + result.message, "error");
+      }
+    } catch (err) {
+      showToast("❌ Network error: " + err.message, "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "📤 Submit Production";
+    }
+  });
+</script>
+</body>
+</html>
